@@ -1,0 +1,34 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1765056243702,
+      "tag": "0000_ambiguous_mandrill",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1765063000000,
+      "tag": "0001_convert_id_to_uuid",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1765107368178,
+      "tag": "0002_breezy_spyke",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1765107416100,
+      "tag": "0003_common_king_cobra",
+      "breakpoints": true
+    }
+  ]
+}
