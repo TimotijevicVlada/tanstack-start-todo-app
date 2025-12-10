@@ -1,24 +1,36 @@
-import { Outlet, createFileRoute } from '@tanstack/react-router'
+import { Outlet, createFileRoute, redirect } from '@tanstack/react-router'
 import Header from '@/components/Header'
+import { getCurrentUser } from '@/api/users/server-fn'
 
 export const Route = createFileRoute('/_private')({
   component: PrivateLayout,
-  beforeLoad: () => {
-    // Fake user for practice purposes
-    const user = {
-      id: '1',
-      username: 'testuser',
-      email: 'test@example.com',
+  beforeLoad: async ({ location }) => {
+    try {
+      const user = await getCurrentUser()
+
+      if (!user) {
+        throw redirect({
+          to: '/login',
+          search: {
+            redirect: location.href,
+          },
+        })
+      }
+
+      return { user }
+    } catch (error) {
+      // If it's a redirect, re-throw it
+      if (error && typeof error === 'object' && 'to' in error) {
+        throw error
+      }
+      // Otherwise, redirect to login
+      throw redirect({
+        to: '/login',
+        search: {
+          redirect: location.href,
+        },
+      })
     }
-
-    // TODO: Replace with actual authentication check
-    // if (!user) {
-    //   throw redirect({
-    //     to: '/login',
-    //   })
-    // }
-
-    return { user }
   },
 })
 

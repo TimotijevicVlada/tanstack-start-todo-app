@@ -1,22 +1,42 @@
-import { Link, createFileRoute } from '@tanstack/react-router'
+import { Link, createFileRoute, redirect } from '@tanstack/react-router'
 import { Loader2, UserPlus } from 'lucide-react'
-import { useState } from 'react'
+import { getCurrentUser } from '@/api/users/server-fn'
+import { useRegister } from '@/api/users/queries'
 
 export const Route = createFileRoute('/_public/register')({
   component: RegisterPage,
+  beforeLoad: async () => {
+    try {
+      const user = await getCurrentUser()
+      if (user) {
+        throw redirect({ to: '/' })
+      }
+    } catch (error) {
+      // If it's a redirect, re-throw it
+      if (error && typeof error === 'object' && 'to' in error) {
+        throw error
+      }
+      // Otherwise, continue (user is not logged in)
+    }
+  },
 })
 
 function RegisterPage() {
-  const [isLoading, setIsLoading] = useState(false)
+  const registerMutation = useRegister()
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    setIsLoading(true)
-    // TODO: Implement register logic
-    setTimeout(() => {
-      setIsLoading(false)
-    }, 1000)
+
+    const formData = new FormData(e.currentTarget)
+    const username = formData.get('username') as string
+    const email = formData.get('email') as string
+    const password = formData.get('password') as string
+
+    registerMutation.mutate({ username, email, password })
   }
+
+  const isLoading = registerMutation.isPending
+  const error = registerMutation.error
 
   return (
     <div className="flex items-center justify-center min-h-screen p-4 text-white">
@@ -96,6 +116,14 @@ function RegisterPage() {
             />
           </div>
 
+          {error && (
+            <div className="p-3 rounded-lg bg-red-500/20 border border-red-500/50 text-red-200 text-sm">
+              {error instanceof Error
+                ? error.message
+                : 'Registration failed. Please try again.'}
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={isLoading}
@@ -119,7 +147,11 @@ function RegisterPage() {
           </button>
           <p className="text-sm text-indigo-200 text-center">
             Already have an account?{' '}
-            <Link to="/login" className="text-cyan-400">
+            <Link
+              to="/login"
+              search={{ redirect: undefined }}
+              className="text-cyan-400"
+            >
               Login
             </Link>
           </p>

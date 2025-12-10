@@ -1,10 +1,30 @@
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { Database, Home, LogOut, Menu, X } from 'lucide-react'
+import { logoutUser } from '@/api/users/server-fn'
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
   const navigate = useNavigate()
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true)
+    try {
+      const result = await logoutUser()
+      // Clear cookie on client side
+      document.cookie = result.cookie
+      // Navigate to login
+      navigate({ to: '/login', search: { redirect: undefined } })
+    } catch (error) {
+      console.error('Logout error:', error)
+      // Still navigate to login even if logout fails
+      navigate({ to: '/login', search: { redirect: undefined } })
+    } finally {
+      setIsLoggingOut(false)
+    }
+  }
+
   return (
     <>
       <header className="p-4 flex items-center bg-gray-800 text-white shadow-lg sticky top-0 z-50">
@@ -26,11 +46,12 @@ export default function Header() {
         </h1>
         <div className="flex items-center gap-2 ml-auto">
           <button
-            onClick={() => navigate({ to: '/login' })}
-            className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-700 transition-colors"
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <LogOut size={20} />
-            Logout
+            {isLoggingOut ? 'Logging out...' : 'Logout'}
           </button>
         </div>
       </header>

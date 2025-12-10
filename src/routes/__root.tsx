@@ -12,8 +12,18 @@ import appCss from '../styles.css?url'
 
 import type { QueryClient } from '@tanstack/react-query'
 
+export interface User {
+  id: string
+  username: string
+  email: string
+  createdAt: Date | null
+}
+
 interface MyRouterContext {
   queryClient: QueryClient
+  auth?: {
+    user: User | null
+  }
 }
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({

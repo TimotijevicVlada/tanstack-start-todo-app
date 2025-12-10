@@ -1,24 +1,50 @@
-import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
+import {
+  Link,
+  createFileRoute,
+  redirect,
+  useSearch,
+} from '@tanstack/react-router'
 import { Loader2, LogIn } from 'lucide-react'
-import { useState } from 'react'
+import { getCurrentUser } from '@/api/users/server-fn'
+import { useLogin } from '@/api/users/queries'
 
 export const Route = createFileRoute('/_public/login')({
   component: LoginPage,
+  validateSearch: (search: Record<string, unknown>) => ({
+    redirect: (search.redirect as string) || undefined,
+  }),
+  beforeLoad: async () => {
+    try {
+      const user = await getCurrentUser()
+      if (user) {
+        throw redirect({ to: '/' })
+      }
+    } catch (error) {
+      // If it's a redirect, re-throw it
+      if (error && typeof error === 'object' && 'to' in error) {
+        throw error
+      }
+      // Otherwise, continue (user is not logged in)
+    }
+  },
 })
 
 function LoginPage() {
-  const [isLoading, setIsLoading] = useState(false)
-  const navigate = useNavigate()
+  const { redirect: redirectTo } = useSearch({ from: '/_public/login' })
+  const loginMutation = useLogin(redirectTo)
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    setIsLoading(true)
-    // TODO: Implement login logic
-    setTimeout(() => {
-      navigate({ to: '/drizzle' })
-      setIsLoading(false)
-    }, 1000)
+
+    const formData = new FormData(e.currentTarget)
+    const email = formData.get('email') as string
+    const password = formData.get('password') as string
+
+    loginMutation.mutate({ email, password })
   }
+
+  const isLoading = loginMutation.isPending
+  const error = loginMutation.error
 
   return (
     <div className="flex items-center justify-center min-h-screen p-4 text-white">
@@ -76,6 +102,13 @@ function LoginPage() {
               }}
             />
           </div>
+          {error && (
+            <div className="p-3 rounded-lg bg-red-500/20 border border-red-500/50 text-red-200 text-sm">
+              {error instanceof Error
+                ? error.message
+                : 'Login failed. Please try again.'}
+            </div>
+          )}
           <button
             type="submit"
             disabled={isLoading}
