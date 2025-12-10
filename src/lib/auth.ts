@@ -1,6 +1,18 @@
 import bcrypt from 'bcrypt'
+import jwt from 'jsonwebtoken'
 
 const SALT_ROUNDS = 12
+
+// JWT Configuration
+const JWT_SECRET =
+  process.env.JWT_SECRET || 'your-super-secret-key-change-in-production'
+const JWT_EXPIRES_IN = '7d' // Token expires in 7 days
+
+export interface JWTPayload {
+  userId: string
+  username: string
+  email: string
+}
 
 /**
  * Hash a password using bcrypt
@@ -72,4 +84,29 @@ export function createClientSessionCookie(token: string): string {
  */
 export function createClearSessionCookie(): string {
   return 'session_token=; Path=/; Max-Age=0'
+}
+
+/**
+ * Create a signed JWT token
+ * This creates a cryptographically signed token that cannot be forged
+ */
+export function createToken(payload: JWTPayload): string {
+  return jwt.sign(payload, JWT_SECRET, {
+    expiresIn: JWT_EXPIRES_IN,
+    issuer: 'test-app',
+  })
+}
+
+/**
+ * Verify and decode a JWT token
+ * Returns null if token is invalid, expired, or tampered with
+ */
+export function verifyToken(token: string): JWTPayload | null {
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload
+    return decoded
+  } catch (error) {
+    // Token is invalid, expired, or tampered with
+    return null
+  }
 }

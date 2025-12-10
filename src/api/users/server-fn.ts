@@ -1,4 +1,3 @@
-import { randomBytes } from 'node:crypto'
 import { createServerFn } from '@tanstack/react-start'
 import { eq } from 'drizzle-orm'
 import type { LoginPayload, RegisterPayload, User } from './types'
@@ -6,8 +5,10 @@ import { db } from '@/db'
 import { users } from '@/db/schema'
 import {
   createClientSessionCookie,
+  createToken,
   hashPassword,
   verifyPassword,
+  verifyToken,
 } from '@/lib/auth'
 
 // Augment the Register interface to include request in server context
@@ -21,11 +22,7 @@ declare module '@tanstack/react-start' {
   }
 }
 
-// Simple in-memory session store (in production, use Redis or database)
-const sessions = new Map<
-  string,
-  { userId: string; username: string; email: string }
->()
+// JWT tokens are stateless - no need for server-side session storage
 
 export const registerUser = createServerFn({
   method: 'POST',
@@ -62,9 +59,8 @@ export const registerUser = createServerFn({
       })
       .returning()
 
-    // Create session
-    const sessionToken = randomBytes(32).toString('hex')
-    sessions.set(sessionToken, {
+    // Create JWT token (cryptographically signed - cannot be forged)
+    const token = createToken({
       userId: newUser.id,
       username: newUser.username,
       email: newUser.email,
@@ -72,7 +68,7 @@ export const registerUser = createServerFn({
 
     // Return cookie string for client-side setting
     // Note: In production, you'd want to set HttpOnly cookies server-side
-    const cookie = createClientSessionCookie(sessionToken)
+    const cookie = createClientSessionCookie(token)
 
     return {
       user: {
@@ -107,9 +103,8 @@ export const loginUser = createServerFn({
         throw new Error('Invalid email or password')
       }
 
-      // Create session
-      const sessionToken = randomBytes(32).toString('hex')
-      sessions.set(sessionToken, {
+      // Create JWT token (cryptographically signed - cannot be forged)
+      const token = createToken({
         userId: user.id,
         username: user.username,
         email: user.email,
@@ -117,7 +112,7 @@ export const loginUser = createServerFn({
 
       // Return cookie string for client-side setting
       // Note: In production, you'd want to set HttpOnly cookies server-side
-      const cookie = createClientSessionCookie(sessionToken)
+      const cookie = createClientSessionCookie(token)
 
       return {
         user: {
@@ -141,42 +136,29 @@ export const loginUser = createServerFn({
 
 export const logoutUser = createServerFn({
   method: 'POST',
-}).handler((ctx) => {
-  const cookieHeader = ctx.context.request.headers.get('cookie')
-  if (cookieHeader) {
-    const cookies = cookieHeader.split(';').reduce(
-      (acc, cookie) => {
-        const [name, value] = cookie.split('=')
-        if (name && value) {
-          acc[name.trim()] = value.trim()
-        }
-        return acc
-      },
-      {} as Record<string, string>,
-    )
-
-    const sessionToken = cookies['session_token']
-    if (sessionToken) {
-      sessions.delete(sessionToken)
-    }
-  }
-
+}).handler(() => {
+  // With JWT, we don't need to delete from server-side storage
+  // Just clear the cookie - the token will be invalid on client side
   return { cookie: 'session_token=; Path=/; Max-Age=0' }
 })
 
 export const getCurrentUser = createServerFn({
   method: 'GET',
-}).handler(async ({ request }): Promise<User | null> => {
-  // Check if request context is available
+}).handler(async (ctx): Promise<User | null> => {
+  // Get token from cookies
+  // TypeScript types may not reflect runtime behavior - request is available at runtime
+  const request = (ctx as any).request || ctx.context.request
+  if (!request) {
+    return null
+  }
+
   const cookieHeader = request.headers.get('cookie')
   if (!cookieHeader) {
     return null
   }
 
-  console.log('cookieHeader', cookieHeader)
-
   const cookies = cookieHeader.split(';').reduce(
-    (acc, cookie) => {
+    (acc: Record<string, string>, cookie: string) => {
       const [name, value] = cookie.split('=')
       if (name && value) {
         acc[name.trim()] = value.trim()
@@ -186,22 +168,25 @@ export const getCurrentUser = createServerFn({
     {} as Record<string, string>,
   )
 
-  const sessionToken = cookies['session_token']
-  if (!sessionToken) {
+  const token = cookies['session_token']
+  if (!token) {
     return null
   }
 
-  const session = sessions.get(sessionToken)
-  if (!session) {
+  // Verify JWT token - this ensures it's not fake, expired, or tampered with
+  const payload = verifyToken(token)
+  if (!payload) {
+    // Token is invalid, expired, or tampered with
     return null
   }
 
+  // Get user from database to ensure they still exist
   const user = await db.query.users.findFirst({
-    where: eq(users.id, session.userId),
+    where: eq(users.id, payload.userId),
   })
 
   if (!user) {
-    sessions.delete(sessionToken)
+    // User was deleted but token is still valid - return null
     return null
   }
 
