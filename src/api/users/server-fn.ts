@@ -2,7 +2,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { eq } from 'drizzle-orm'
 import type { LoginPayload, RegisterPayload, User } from './types'
 import { db } from '@/db'
-import { users } from '@/db/schema'
+import { users } from '@/db/schema/users'
 import {
   createClientSessionCookie,
   createToken,
@@ -29,7 +29,6 @@ export const registerUser = createServerFn({
 })
   .inputValidator((data: RegisterPayload) => data)
   .handler(async ({ data }) => {
-    // Check if user already exists
     const existingUser = await db.query.users.findFirst({
       where: eq(users.email, data.email),
     })
@@ -46,10 +45,8 @@ export const registerUser = createServerFn({
       throw new Error('Username already taken')
     }
 
-    // Hash password
     const passwordHash = await hashPassword(data.password)
 
-    // Create user
     const [newUser] = await db
       .insert(users)
       .values({
@@ -59,15 +56,12 @@ export const registerUser = createServerFn({
       })
       .returning()
 
-    // Create JWT token (cryptographically signed - cannot be forged)
     const token = createToken({
       userId: newUser.id,
       username: newUser.username,
       email: newUser.email,
     })
 
-    // Return cookie string for client-side setting
-    // Note: In production, you'd want to set HttpOnly cookies server-side
     const cookie = createClientSessionCookie(token)
 
     return {
@@ -86,51 +80,38 @@ export const loginUser = createServerFn({
 })
   .inputValidator((data: LoginPayload) => data)
   .handler(async ({ data }) => {
-    try {
-      // Find user by email
-      const user = await db.query.users.findFirst({
-        where: eq(users.email, data.email),
-      })
+    const user = await db.query.users.findFirst({
+      where: eq(users.email, data.email),
+    })
 
-      if (!user) {
-        throw new Error('Invalid email or password')
-      }
+    if (!user) {
+      throw new Error('Invalid email or password')
+    }
 
-      // Verify password
-      const isValid = await verifyPassword(data.password, user.passwordHash)
+    const isValid = await verifyPassword(data.password, user.passwordHash)
 
-      if (!isValid) {
-        throw new Error('Invalid email or password')
-      }
+    if (!isValid) {
+      throw new Error('Invalid email or password')
+    }
 
-      // Create JWT token (cryptographically signed - cannot be forged)
-      const token = createToken({
-        userId: user.id,
+    const token = createToken({
+      userId: user.id,
+      username: user.username,
+      email: user.email,
+    })
+
+    // Return cookie string for client-side setting
+    // Note: In production, you'd want to set HttpOnly cookies server-side
+    const cookie = createClientSessionCookie(token)
+
+    return {
+      user: {
+        id: user.id,
         username: user.username,
         email: user.email,
-      })
-
-      // Return cookie string for client-side setting
-      // Note: In production, you'd want to set HttpOnly cookies server-side
-      const cookie = createClientSessionCookie(token)
-
-      return {
-        user: {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          createdAt: user.createdAt,
-        },
-        cookie,
-      }
-    } catch (error) {
-      // Log the error for debugging
-      console.error('Login error:', error)
-      // Re-throw with a more user-friendly message if it's not already an Error
-      if (error instanceof Error) {
-        throw error
-      }
-      throw new Error('An error occurred during login. Please try again.')
+        createdAt: user.createdAt,
+      },
+      cookie,
     }
   })
 

@@ -6,7 +6,7 @@ import type {
   GetCommentsPayload,
 } from './types'
 import { db } from '@/db'
-import { todoComments } from '@/db/schema'
+import { todoComments } from '@/db/schema/todo-comments'
 import { requireAuth } from '@/lib/auth'
 
 export const getComments = createServerFn({
@@ -14,7 +14,6 @@ export const getComments = createServerFn({
 })
   .inputValidator((data: GetCommentsPayload) => data)
   .handler(async (ctx) => {
-    // Require authentication
     requireAuth(ctx)
 
     if (!ctx.data.todoId) return []
@@ -29,7 +28,6 @@ export const createComment = createServerFn({
 })
   .inputValidator((data: CreateCommentPayload) => data)
   .handler(async (ctx) => {
-    // Require authentication
     requireAuth(ctx)
 
     const [newComment] = await db
@@ -47,7 +45,6 @@ export const deleteComment = createServerFn({
 })
   .inputValidator((data: DeleteCommentPayload) => data)
   .handler(async (ctx) => {
-    // Require authentication
     requireAuth(ctx)
 
     const [deletedComment] = await db
