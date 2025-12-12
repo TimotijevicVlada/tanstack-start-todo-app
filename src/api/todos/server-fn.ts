@@ -8,16 +8,14 @@ import type {
   UpdateTodoPayload,
 } from '@/api/todos/types'
 import { db } from '@/db'
-import { todos } from '@/db/schema'
 import { requireAuth } from '@/lib/auth'
+import { todos } from '@/db/schema/todos'
 
 export const getTodos = createServerFn({
   method: 'GET',
 }).handler(async (ctx) => {
-  // Require authentication and get userId
   const userId = requireAuth(ctx)
 
-  // Only return todos for the authenticated user
   return await db.query.todos.findMany({
     where: eq(todos.userId, userId),
     orderBy: [asc(todos.createdAt)],
@@ -33,10 +31,8 @@ export const getTodoById = createServerFn({
 })
   .inputValidator((data: GetTodoByIdPayload) => data)
   .handler(async (ctx) => {
-    // Require authentication and get userId
     const userId = requireAuth(ctx)
 
-    // Only return todo if it belongs to the authenticated user
     const todo = await db.query.todos.findFirst({
       where: eq(todos.id, ctx.data.id),
     })
@@ -54,10 +50,8 @@ export const createTodo = createServerFn({
 })
   .inputValidator((data: CreateTodoPayload) => data)
   .handler(async (ctx) => {
-    // Require authentication and get userId
     const userId = requireAuth(ctx)
 
-    // Create todo associated with the authenticated user
     const [newTodo] = await db
       .insert(todos)
       .values({
@@ -74,10 +68,8 @@ export const deleteTodo = createServerFn({
 })
   .inputValidator((data: DeleteTodoPayload) => data)
   .handler(async (ctx) => {
-    // Require authentication and get userId
     const userId = requireAuth(ctx)
 
-    // Verify ownership before deleting
     const todo = await db.query.todos.findFirst({
       where: eq(todos.id, ctx.data.id),
     })
@@ -98,10 +90,8 @@ export const updateTodo = createServerFn({
 })
   .inputValidator((data: UpdateTodoPayload) => data)
   .handler(async (ctx) => {
-    // Require authentication and get userId
     const userId = requireAuth(ctx)
 
-    // Verify ownership before updating
     const todo = await db.query.todos.findFirst({
       where: eq(todos.id, ctx.data.id),
     })
@@ -124,10 +114,8 @@ export const toggleComplete = createServerFn({
   .inputValidator((data: ToggleCompletePayload) => data)
   .handler(async (ctx) => {
     const { data } = ctx
-    // Require authentication and get userId
     const userId = requireAuth(ctx)
 
-    // Verify ownership before updating
     const todo = await db.query.todos.findFirst({
       where: eq(todos.id, data.id),
     })
