@@ -16,6 +16,8 @@ import {
   useUpdateTodoMutation,
 } from '@/api/todos/queries'
 import { getTodos } from '@/api/todos/server-fn'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 export const Route = createFileRoute('/_private/drizzle/')({
   component: DemoDrizzle,
@@ -117,24 +119,26 @@ function DemoDrizzle() {
                     {todo.title}
                   </span>
                   <div className="flex items-center gap-4">
-                    <button
+                    <Button
+                      variant="outline"
+                      size="icon"
                       onClick={() =>
                         handleToggleComplete(todo.id, todo.completed ?? false)
                       }
-                      className="text-green-500 hover:text-green-600 transition-colors cursor-pointer"
                     >
                       {todo.completed ? (
                         <X className="w-4 h-4" />
                       ) : (
                         <Check className="w-4 h-4" />
                       )}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
                       onClick={() => handleDelete(todo.id)}
-                      className="text-red-500 hover:text-red-600 transition-colors cursor-pointer"
                     >
                       <Trash2 className="w-4 h-4" />
-                    </button>
+                    </Button>
                   </div>
                 </div>
                 {todo.description && (
@@ -146,44 +150,26 @@ function DemoDrizzle() {
                   onSubmit={(e) => handleUpdate(e, todo.id)}
                   className="flex gap-3"
                 >
-                  <input
+                  <Input
                     type="text"
                     name="title"
                     placeholder="Update title..."
-                    className="min-w-0 h-10 flex-1 px-4 rounded-lg border focus:outline-none focus:ring-2 transition-all text-white placeholder-indigo-300/50"
-                    style={{
-                      background: 'rgba(93, 103, 227, 0.1)',
-                      borderColor: 'rgba(93, 103, 227, 0.3)',
-                    }}
                     defaultValue={todo.title}
                   />
-                  <input
+                  <Input
                     type="text"
                     name="description"
                     placeholder="Update description..."
-                    className="min-w-0 h-10 flex-1 px-4 rounded-lg border focus:outline-none focus:ring-2 transition-all text-white placeholder-indigo-300/50"
-                    style={{
-                      background: 'rgba(93, 103, 227, 0.1)',
-                      borderColor: 'rgba(93, 103, 227, 0.3)',
-                    }}
                     defaultValue={todo.description}
                   />
-                  <button
-                    type="submit"
-                    className="flex items-center gap-2 h-10 px-6 font-semibold rounded-lg shadow-lg transition-all duration-200 hover:shadow-xl hover:scale-105 active:scale-95 whitespace-nowrap cursor-pointer"
-                    style={{
-                      background:
-                        'linear-gradient(135deg, #5d67e3 0%, #8b5cf6 100%)',
-                      color: 'white',
-                    }}
-                  >
+                  <Button type="submit" variant="outline">
                     {isUpdatingTodo ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <Pencil className="w-4 h-4" />
                     )}
                     Update
-                  </button>
+                  </Button>
                 </form>
               </div>
               <div
@@ -218,42 +204,21 @@ function DemoDrizzle() {
           onSubmit={handleSubmit}
           className="flex gap-2 border-t border-white/10 pt-4"
         >
-          <input
-            type="text"
-            name="title"
-            placeholder="Add a new todo..."
-            className="flex-1 px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 transition-all text-white placeholder-indigo-300/50"
-            style={{
-              background: 'rgba(93, 103, 227, 0.1)',
-              borderColor: 'rgba(93, 103, 227, 0.3)',
-            }}
-          />
-          <input
+          <Input type="text" name="title" placeholder="Add a new todo..." />
+          <Input
             type="text"
             name="description"
             placeholder="Add a new description..."
-            className="flex-1 px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 transition-all text-white placeholder-indigo-300/50"
-            style={{
-              background: 'rgba(93, 103, 227, 0.1)',
-              borderColor: 'rgba(93, 103, 227, 0.3)',
-            }}
           />
 
-          <button
-            type="submit"
-            className="flex items-center gap-2 px-6 py-3 font-semibold rounded-lg shadow-lg transition-all duration-200 hover:shadow-xl hover:scale-105 active:scale-95 whitespace-nowrap"
-            style={{
-              background: 'linear-gradient(135deg, #5d67e3 0%, #8b5cf6 100%)',
-              color: 'white',
-            }}
-          >
+          <Button type="submit" variant="outline">
             {isCreatingTodo ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <Plus className="w-4 h-4" />
             )}
             Add Todo
-          </button>
+          </Button>
         </form>
       </div>
     </div>
